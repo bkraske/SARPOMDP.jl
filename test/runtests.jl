@@ -37,12 +37,12 @@ end
 #rewarddist = rewarddist .+ abs(minimum(rewarddist)) .+ 0.01
 rewarddist = abs.(rewarddist)
 mapsize = reverse(size(rewarddist)) #(13,16)
-maxbatt = Int(norm(mapsize,1)*2)
-target = [4,4]
-sinit = SAR_State([1,1], target, maxbatt)#rand(initialstate(msim))
+maxbatt = 15#Int(norm(mapsize,1)*2)
+target = SVector{2}([4,4])
+sinit = SAR_State(SVector{2}([1,1]), target, (0,0,0), maxbatt)#rand(initialstate(msim))
 
 pomdp = SAR_POMDP(sinit, 
-                    size=mapsize, 
+                    m_size=mapsize, 
                     rewarddist=rewarddist, 
                     maxbatt=maxbatt)
 # pomdp = SAR_POMDP()
@@ -67,14 +67,14 @@ end
 
 @testset "Reward" begin
     for (i,l) in enumerate(locs)
-        @test reward(pomdp,SAR_State(l,target,99),:stay,SAR_State(l,target,99)) == vals[i]
+        @test reward(pomdp,SAR_State(l,target,(0,0,0),99),:stay,SAR_State(l,target,(0,0,0),99)) == vals[i]
     end
-    @test reward(pomdp,SAR_State(target,target,99),:stay,SAR_State(target,target,99)) == pomdp.r_find
+    @test reward(pomdp,SAR_State(target,target,(0,0,0),99),:stay,SAR_State(target,target,(0,0,0),99)) == pomdp.r_find
     term_plus_one = 8
-    @test isterminal(pomdp,SAR_State(target,target,term_plus_one)) == false
-    @test isterminal(pomdp,SAR_State([-1,-1],[-1,-1],-1)) == true
-    @test isterminal(pomdp,support(transition(pomdp,SAR_State(target,target,term_plus_one-1),:up))[1]) == true
-    @test reward(pomdp,SAR_State(target,target,term_plus_one),:stay,SAR_State(target,target,term_plus_one)) == pomdp.r_find
+    @test isterminal(pomdp,SAR_State(target,target,(0,0,0),term_plus_one)) == false
+    @test isterminal(pomdp,SAR_State([-1,-1],[-1,-1],(0,0,0),-1)) == true
+    @test isterminal(pomdp,support(transition(pomdp,SAR_State(target,target,(0,0,0),term_plus_one-1),:up))[1]) == true
+    @test reward(pomdp,SAR_State(target,target,(0,0,0),term_plus_one),:stay,SAR_State(target,target,(0,0,0),term_plus_one)) == pomdp.r_find
 end
 
 @testset "Consistency Tests" begin

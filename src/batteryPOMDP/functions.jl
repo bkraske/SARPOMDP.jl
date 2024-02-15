@@ -1,18 +1,20 @@
 function POMDPs.states(m::SAR_POMDP) 
-    nonterm = vec(collect(SAR_State(SVector(c[1],c[2]), SVector(c[3],c[4]), d) for c in Iterators.product(1:m.size[1], 1:m.size[2], 1:m.size[1], 1:m.size[2]) for d in 1:m.maxbatt))
-    return push!(nonterm, SAR_State([-1,-1],[-1,-1],-1))
+    nonterm = vec(collect(SAR_State(SVector(c[1],c[2]), SVector(c[3],c[4]), Tuple(c[5:end]), d) for c in Iterators.product(1:m.size[1], 1:m.size[2], 1:m.size[1], 1:m.size[2], [0:1 for _ in 1:length(m.r_locs)]...) for d in 1:m.maxbatt))
+    return push!(nonterm, SAR_State(SVector{2}([-1,-1]),SVector{2}([-1,-1]),Tuple([0 for _ in eachindex(m.r_locs)]),-1))
 end
 
 function POMDPs.stateindex(m::SAR_POMDP, s)
+    r_len = length(m.r_locs)
     if s.robot == SA[-1,-1]
-        return m.size[1]^2 * m.size[2]^2 * m.maxbatt + 1
+        return m.size[1]^2 * m.size[2]^2 * m.maxbatt * 2^r_len + 1
     else 
-        return LinearIndices((1:m.size[1], 1:m.size[2], 1:m.size[1], 1:m.size[2], 1:m.maxbatt))[s.robot..., s.target..., s.battery]
+        return LinearIndices((1:m.size[1], 1:m.size[2], 1:m.size[1], 1:m.size[2], [0:1 for _ in 1:r_len]..., 1:m.maxbatt))[s.robot..., s.target..., 1 .+ s.visited...,s.battery]
     end
 end
 
 function POMDPs.initialstate(m::SAR_POMDP)
-    return POMDPTools.Uniform(SAR_State(m.robot_init, SVector(x, y), m.maxbatt) for x in 1:m.size[1], y in 1:m.size[2])
+    no_visit = Tuple(Int.(zeros(length(m.r_locs))))
+    return POMDPTools.Uniform(SAR_State(m.robot_init, SVector(x, y), no_visit, m.maxbatt) for x in 1:m.size[1], y in 1:m.size[2])
 end
 
 """
@@ -39,14 +41,21 @@ function POMDPs.transition(m::SAR_POMDP, s, a)
     required_batt = dist(s.robot, m.robot_init)
 
     if isequal(s.robot, s.target) || (s.battery - required_batt <= 1)
-        return Deterministic(SAR_State([-1,-1], [-1,-1], -1))
+        return Deterministic(SAR_State([-1,-1], [-1,-1], Tuple([0 for _ in eachindex(m.r_locs)]), -1))
     # elseif sp.battery == 1 #Handle empty battery
     #     return Deterministic(SAR_State([-1,-1], [-1,-1], -1))
     end
 
     newrobot = bounce(m, s.robot, actiondir[a])
+    visit = [s.visited...]
+    for i in eachindex(m.r_locs)
+        if s == m.r_locs[i]
+            visit[i] = 1
+        end
+    end
+    new_visit = Tuple(visit)
 
-    push!(states, SAR_State(newrobot, s.target, s.battery-1))
+    push!(states, SAR_State(newrobot, s.target, new_visit, s.battery-1))
     push!(probs, remaining_prob)
 
     return SparseCat(states, probs)
@@ -69,7 +78,15 @@ function POMDPs.reward(m::SAR_POMDP, s::SAR_State, a::Symbol)
         return reward_running + reward_target
     end
 
-    return reward_running + reward_target + m.reward[s.robot...]
+    loc_val = m.reward[s.robot...]
+    if loc_val != 0.0
+        ind = findall(x->x==s,m.r_locs)
+        if !isempty(ind) && s.visited[ind[1]] == 1
+            loc_val = 0.0
+        end
+    end
+
+    return reward_running + reward_target + loc_val
 end
 
 set_default_graphic_size(18cm,14cm)

@@ -45,7 +45,7 @@ hallway = [80.0 80.0;
 rewarddist = abs.(rewarddist)
 mapsize = reverse(size(rewarddist)) #(13,16)
 maxbatt = 1000
-sinit = SAR_State([3,1], [10,11], maxbatt)#rand(initialstate(msim))
+sinit = SAR_State([3,1], [10,11], (0,0,0) maxbatt)#rand(initialstate(msim))
 
 pomdp = SAR_POMDP(sinit, 
                     size=mapsize, 
