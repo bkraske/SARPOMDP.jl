@@ -63,7 +63,7 @@ function SAR_POMDP(;
         rewarddist[l...] = rew_vals[i]
     end
 
-    sinit = SAR_State(init_ro,target,(zeros(length(rew_locs))...),maxbatt)
+    sinit = SAR_State(init_ro,target,Tuple(Int.(zeros(length(rew_locs)))),maxbatt)
     obstacles = Set{SVector{2, Int}}()
     robot_init = sinit.robot
     tprob = 0.7

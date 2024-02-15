@@ -22,10 +22,11 @@ using LinearAlgebra
 # 4.5434      1.84961    5.05996    1.71024  -16.2119   -70.8986    -68.3217   -42.1496    13.7424     14.7261       1.78606    8.92938    0.35768;
 # 5.93137     2.38837    5.00692    2.17936   -6.58787  -48.8138    -27.0167   -10.6387     1.24938    21.9765       4.26369    6.6729     2.1039;
 # 6.35598     1.425      2.92712    4.96801   13.0207    -0.589068  -15.8313    10.7642    16.1614     15.3144       3.59158    7.8918     9.1199]
-locs = [[1,4],[4,1],[3,3]]
+# locs = [[1,4],[4,1],[3,3]]
+locs = [[1,3],[3,1],[3,3]]
 vals = [2.0,2.0,1.0]
 
-rewarddist = zeros(5,5)
+rewarddist = zeros(3,3)
 for (i,l) in enumerate(locs)
     rewarddist[l...] = vals[i]
 end
@@ -37,8 +38,8 @@ end
 #rewarddist = rewarddist .+ abs(minimum(rewarddist)) .+ 0.01
 rewarddist = abs.(rewarddist)
 mapsize = reverse(size(rewarddist)) #(13,16)
-maxbatt = 15#Int(norm(mapsize,1)*2)
-target = SVector{2}([4,4])
+maxbatt = 10#Int(norm(mapsize,1)*2)
+target = SVector{2}([2,2])
 sinit = SAR_State(SVector{2}([1,1]), target, (0,0,0), maxbatt)#rand(initialstate(msim))
 
 pomdp = SAR_POMDP(sinit, 
