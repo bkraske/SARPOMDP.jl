@@ -12,7 +12,7 @@ function POMDPs.stateindex(m::SAR_POMDP, s)
 end
 
 function POMDPs.initialstate(m::SAR_POMDP)
-    return POMDPTools.Uniform(SAR_State(m.robot_init, SVector(x, y), m.maxbatt) for x in 1:m.size[1], y in 1:m.size[2])
+    return m.initial_state_dist
 end
 
 """

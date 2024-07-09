@@ -42,10 +42,10 @@ target = [4,4]
 sinit = SAR_State([1,1], target, maxbatt)#rand(initialstate(msim))
 
 pomdp = SAR_POMDP(sinit, 
-                    size=mapsize, 
+                    map_size=mapsize, 
                     rewarddist=rewarddist, 
                     maxbatt=maxbatt)
-# pomdp = SAR_POMDP()
+pomdp2 = SAR_POMDP()
 
 @testset "Indices" begin
     x = 0
@@ -96,7 +96,7 @@ end
     target2 = [4,4]
     sinit2 = SAR_State([1,1], target2, maxbatt2)#rand(initialstate(msim))
     pomdp2 = SAR_POMDP(sinit2, 
-                    size=mapsize2, 
+                    map_size=mapsize2, 
                     rewarddist=rewarddist2, 
                     maxbatt=maxbatt2,auto_home=false,terminate_on_find=false)
     if pomdp2.terminate_on_find == false && pomdp2.auto_home == false
