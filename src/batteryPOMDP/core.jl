@@ -17,7 +17,7 @@ mutable struct SAR_POMDP <: POMDP{SAR_State, Symbol, BitArray{1}}
     maxbatt::Int
     auto_home::Bool
     terminate_on_find::Bool
-    initial_state_dist::SparseCat{Set{SAR_State},Vector{Float64}}
+    initial_state_dist::SparseCat{Vector{SAR_State},Vector{Float64}}
 end
 
 function SAR_POMDP(sinit::SAR_State; 
@@ -45,9 +45,11 @@ function SAR_POMDP(sinit::SAR_State;
         end
     end
 
-    if !isa(initial_state_dist,SparseCat)
-        supp = support(initial_state_dist)
+    if !isa(initial_state_dist,SparseCat{Vector{SAR_State},Vector{Float64}})
+        supp = [support(initial_state_dist)...]
         cat_initial_state_dist = SparseCat(supp,[pdf(initial_state_dist,s) for s in supp])
+    else
+        cat_initial_state_dist = initial_state_dist
     end
 
     return SAR_POMDP(SVector(map_size), obstacles, robot_init, tprob, targetloc, r_locs, r_vals, 1000.0, rewarddist, Int(maxbatt), auto_home, terminate_on_find,cat_initial_state_dist)
@@ -76,9 +78,11 @@ function SAR_POMDP(;
     targetloc = sinit.target
     maxbatt = maxbatt
 
-    if !isa(initial_state_dist,SparseCat)
-        supp = support(initial_state_dist)
+    if !isa(initial_state_dist,SparseCat{Vector{SAR_State},Vector{Float64}})
+        supp = [support(initial_state_dist)...]
         cat_initial_state_dist = SparseCat(supp,[pdf(initial_state_dist,s) for s in supp])
+    else
+        cat_initial_state_dist = initial_state_dist
     end
 
     return SAR_POMDP(SVector(map_size), obstacles, robot_init, tprob, targetloc, rew_locs, rew_vals, r_find, rewarddist, Int(maxbatt), auto_home, terminate_on_find, cat_initial_state_dist)
