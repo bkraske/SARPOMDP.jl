@@ -4,6 +4,11 @@ struct SAR_State
     battery::Int
 end
 
+struct SAR_State_human{S}
+    underlying_state::S
+    onpath::Bool
+end
+
 mutable struct SAR_POMDP <: POMDP{SAR_State, Symbol, BitArray{1}}
     size::SVector{2, Int}
     obstacles::Set{SVector{2, Int}}
@@ -18,6 +23,13 @@ mutable struct SAR_POMDP <: POMDP{SAR_State, Symbol, BitArray{1}}
     auto_home::Bool
     terminate_on_find::Bool
     initial_state_dist::SparseCat{Set{SAR_State},Vector{Float64}}
+end
+
+mutable struct SAR_POMDP_human{P<:POMDP} <: POMDP{SAR_State, Symbol, BitArray{1}}
+    underlying_pomdp::P
+    initial_state_dist::SparseCat{Set{SAR_State_human},Vector{Float64}}
+    action_list::Vector{Symbol}
+    observation_list::Vector{BitArray{1}}
 end
 
 function SAR_POMDP(sinit::SAR_State; 

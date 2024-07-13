@@ -27,7 +27,6 @@ include(joinpath(@__DIR__,"batteryPOMDP","core.jl"))
 export SAR_POMDP, SAR_State
 
 include(joinpath(@__DIR__,"batteryPOMDP","functions.jl"))
-include(joinpath(@__DIR__,"batteryPOMDP","observations.jl"))
 include(joinpath(@__DIR__,"batteryPOMDP","simulate.jl"))
 export simulateSARPOMDP, 
        SARPOMDPSimulator

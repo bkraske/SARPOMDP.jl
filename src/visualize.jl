@@ -86,73 +86,149 @@ function rendhist(hist, m, rewarddist; delay=0.1)
     end
 end 
 
-function POMDPTools.ModelTools.render(m::SAR_POMDP, goal, 
-                                            hippo::Vector{StaticArraysCore.SVector{2, Int64}}, 
-                                            baseline::Vector{StaticArraysCore.SVector{2, Int64}})
+set_default_graphic_size(18cm,14cm)
+
+function POMDPTools.ModelTools.render(m::SAR_POMDP, step)
+    #set_default_graphic_size(14cm,14cm)
     nx, ny = m.size
     cells = []
-    iter = 1
-    baseiter = 1
-    minr = minimum(m.reward)-1
-    maxr = maximum(m.reward)
-    opvecbase = collect(1:length(baseline))./length(baseline)
-    opbase = Dict(baseline.=>opvecbase)
+    target_marginal = zeros(nx, ny)
+
+    if haskey(step, :bp) && !ismissing(step[:bp])
+        for sp in support(step[:bp])
+            p = pdf(step[:bp], sp)
+            if sp.target != [-1,-1] # TO-DO Fix this
+                target_marginal[sp.target...] += p
+            end
+        end
+    end
+    #display(target_marginal)
+    norm_top = normalize(target_marginal)
+    #display(norm_top)
     for x in 1:nx, y in 1:ny
         cell = cell_ctx((x,y), m.size)
-        r = m.reward[rewardinds(m, SA[x,1+ny-y])...]
-        if iszero(r)
-            target = compose(context(), rectangle(), fill("black"), stroke("gray"))
-        else
-            frac = (r-minr)/(maxr-minr)
-            clr = get(ColorSchemes.turbo, frac)
-            target = compose(context(), rectangle(), fill(clr), stroke("gray"), fillopacity(0.3))
-            #target = compose(context(), rectangle(), fillopacity(normie(m.reward[rewardinds(m,SA[x,y])...],m.reward)), fill("green"), stroke("gray"))
-        end
-        if [x,y] ∈ hippo || [x,y] ∈ baseline
-            # if [x,y] ∈ hippo
-            #     hippoclr = get(ColorSchemes.linear_kbc_5_95_c73_n256, ophippo[[x,y]])
-            #     #hippocell = compose(context(), circle(), fillopacity(clamp(ophippo[[x,y]], 0.3, 1.0)), fill("red"), stroke("black"), linewidth(0.5mm))
-            #     hippocell = compose(context(), circle(), fill(hippoclr), stroke("black"), linewidth(0.5mm))
-            #     compose!(cell, hippocell)
-            #     hippoiter += 1
-            # end
-            if [x,y] ∈ baseline
-                baseclr = get(ColorSchemes.linear_kbc_5_95_c73_n256, opbase[[x,y]])
-                basecell = compose(context(), circle(), fill(baseclr), stroke("black"), linewidth(0.5mm))            
-                #basecell = compose(context(), circle(), fillopacity(clamp(opbase[[x,y]], 0.3, 1.0)), fill("black"), stroke("black"), linewidth(0.5mm))
-                compose!(cell, basecell)
-                baseiter += 1
+        t_op = norm_top[x,y]
+        
+        # TO-DO Fix This
+        if t_op > 1.0
+            if t_op < 1.001
+                t_op = 0.999
+            else
+                @error("t_op > 1.001", t_op)
             end
-        else
-            compose!(cell, target)
         end
+        opval = t_op
+        if opval > 0.0 
+           opval = clamp(t_op*2,0.05,1.0)
+        end
+        max_op = maximum(norm_top)
+        min_op = minimum(norm_top)
+        frac = (opval-min_op)/(max_op-min_op)
+        clr = get(ColorSchemes.bamako, frac)
+        
+        target = compose(context(), rectangle(), fill(clr), stroke("gray"))
+        #println("opval: ", t_op)
         compose!(cell, target)
 
-        
-
         push!(cells, cell)
-        iter += 1
     end
-    # hippoline = compose(context(), line(Tuple.(hippo)), linewidth(1mm), stroke("red"))
     grid = compose(context(), linewidth(0.00000001mm), cells...)
     outline = compose(context(), linewidth(0.01mm), rectangle(), fill("white"), stroke("black"))
 
-
-    robot_ctx = cell_ctx(hippo[end], m.size)
-    robot = compose(robot_ctx, circle(0.5, 0.5, 0.5), fill("black"))
-    target_ctx = cell_ctx(goal, m.size)
-    target = compose(target_ctx, star(0.5,0.5,0.5,5,0.5), fill("orange"), stroke("black"))
-
-    #mapcells_hippo = [coord(cell, m.size) for cell ∈ hippo]
-    #mapcells_base = [coord(cell, m.size) for cell ∈ baseline]
-    #hippotrajec = compose(context(), line(mapcells_hippo), strokeopacity(0.6), linewidth(1mm), stroke("black"))
-    #basetrajec = compose(context(), line(mapcells_base), strokeopacity(0.6), linewidth(1mm), stroke("red"))
-
-    
-    legend = compose(rect_ctx([m.size[1]-10, 5], m.size, 10, 5), rectangle(), fill("white"), stroke("black"))
-
+    if haskey(step, :sp)
+        robot_ctx = cell_ctx(step[:sp].robot, m.size)
+        robot = compose(robot_ctx, circle(0.5, 0.5, 0.5), fill("blue"))
+        target_ctx = cell_ctx(step[:sp].target, m.size)
+        target = compose(target_ctx, star(0.5,0.5,0.8,5,0.5), fill("orange"), stroke("black"))
+    else
+        robot = nothing
+        target = nothing
+    end 
+    #img = read(joinpath(@__DIR__,"../..","drone.png"));
+    #robot = compose(robot_ctx, bitmap("image/png",img, 0, 0, 1, 1))
+    #person = read(joinpath(@__DIR__,"../..","missingperson.png"));
+    #target = compose(target_ctx, bitmap("image/png",person, 0, 0, 1, 1))
 
     sz = min(w,h)
-    return compose(context((w-sz)/2, (h-sz)/2, sz, (44/59)*sz), robot, target, grid, outline)
-    #return compose(context((w-sz)/2, (h-sz)/2, sz, (44/59)*sz), legend, hippotrajec, basetrajec, robot, target, grid, outline)
+    
+    return compose(context((w-sz)/2, (h-sz)/2, sz, sz), robot, target, grid, outline)
 end
+
+function normie(input, a)
+    return (input-minimum(a))/(maximum(a)-minimum(a))
+end
+
+function rewardinds(m, pos::SVector{2, Int64})
+    correct_ind = reverse(pos)
+    xind = m.size[2]+1 - correct_ind[1]
+    inds = [xind, correct_ind[2]]
+
+    return pos
+end
+
+
+function POMDPTools.ModelTools.render(m::SAR_POMDP, step, plt_reward::Bool)
+    nx, ny = m.size
+    cells = []
+
+    minr = minimum(m.reward)-1
+    maxr = maximum(m.reward)
+
+    if haskey(step, :hist)
+        trajec = [(histstep[1].robot, histstep[2]) for histstep in step[:hist]]
+        statehist = [s for (s,a) in trajec]
+        actionhist = [a for (s,a) in trajec]
+    end
+    for x in 1:nx, y in 1:ny
+        cell = cell_ctx((x,y), m.size)
+        r = m.reward[rewardinds(m, SA[x,y])...]
+        if iszero(r)
+            target = compose(context(), rectangle(), fill("white"), stroke("gray"))
+        else
+            frac = (r-minr)/(maxr-minr)
+            clr = get(ColorSchemes.turbo, frac)
+            target = compose(context(), rectangle(), fill(clr), stroke("gray"), fillopacity(0.9))
+        end
+
+        if haskey(step, :hist)
+            for (i, (xh, yh)) in enumerate(statehist)
+                if x == xh && y == yh
+                    if actionhist[i] == :left
+                        spec = compose(context(), arrow(), stroke("black"), fill(nothing), linewidth(0.6mm), (context(), line([(0.5,0.5),(0.3,0.5)]), stroke("black")))
+                        compose!(target, spec)
+                    elseif actionhist[i] == :right
+                        spec = compose(context(), arrow(), stroke("black"), fill(nothing), linewidth(0.6mm), (context(), line([(0.5,0.5),(0.7,0.5)]), stroke("black")))
+                        compose!(target, spec)
+                    elseif actionhist[i] == :up
+                        spec = compose(context(), arrow(), stroke("black"), fill(nothing), linewidth(0.6mm), (context(), line([(0.5,0.5),(0.5,0.3)]), stroke("black")))
+                        compose!(target, spec)
+                    elseif actionhist[i] == :down
+                        spec = compose(context(), arrow(), stroke("black"), fill(nothing), linewidth(0.6mm), (context(), line([(0.5,0.5),(0.5,0.7)]), stroke("black")))
+                        compose!(target, spec)
+                    end
+                end
+            end
+        end
+
+        compose!(cell, target)
+        push!(cells, cell)
+    end
+    grid = compose(context(), linewidth(1mm), cells...)
+    outline = compose(context(), linewidth(0.05mm), rectangle(), fill("black"), stroke("black"))
+
+    if haskey(step, :sp)
+        robot_ctx = cell_ctx(step[:sp].robot, m.size)
+        robot = compose(robot_ctx, circle(0.5, 0.5, 0.3), fill("blue"))
+        target_ctx = cell_ctx(step[:sp].target, m.size)
+        target = compose(target_ctx, star(0.5,0.5,0.5,5,0.5), fill("orange"), stroke("black"))
+    else
+        robot = nothing
+        target = nothing
+    end
+    sz = min(w,h)
+    #return compose(context((w-sz)/2, (h-sz)/2, sz, (ny/nx)*sz), robot, target, grid, outline)
+    return compose(context((w-sz)/2, (h-sz)/2, sz, sz), robot, target, grid, outline)
+end
+
+POMDPTools.ModelTools.render(m::SAR_POMDP_human, step) = POMDPTools.ModelTools.render(m.pomdp, step)
+POMDPTools.ModelTools.render(m::SAR_POMDP_human, step, plt_reward::Bool) = POMDPTools.ModelTools.render(m.pomdp, step, plt_reward)
