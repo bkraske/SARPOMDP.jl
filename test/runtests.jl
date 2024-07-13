@@ -108,6 +108,102 @@ end
     @test reward(pomdp2,SAR_State(target,target,term_plus_one-1),:stay) == -1e10
 end
 
+@testset "Initial State Tests" begin
+    init_ro = [1,1]
+    target = [4,4]
+    maxbatt = 20
+    rew_locs = SVector{2,Int}.([[1,4],[4,1],[3,3]])
+    rew_vals = [2.0,2.0,1.0]
+    r_find = 1000.0
+    map_size=(5,5)
+    auto_home=true
+    terminate_on_find=true
+    is = POMDPTools.Uniform(SAR_State(init_ro, SVector(x, y), maxbatt) for x in 1:map_size[1], y in 1:map_size[2])
+
+    t_pomdp = SAR_POMDP(
+    init_ro=init_ro,
+    target = target,
+    maxbatt = maxbatt,
+    rew_locs = rew_locs,
+    rew_vals = rew_vals,
+    r_find = r_find,
+    map_size = map_size,
+    auto_home = auto_home,
+    terminate_on_find = terminate_on_find,
+    initial_state_dist=is)
+
+    @test length(support(is)) == length(support(initialstate(t_pomdp)))
+    @test all([state ∈ support(initialstate(t_pomdp)) for state in support(is)])
+    @test [pdf(is,state) for state in support(is)] == [pdf(initialstate(t_pomdp),state) for state in support(initialstate(t_pomdp))]
+
+    up = DiscreteUpdater(t_pomdp)
+
+    @test initialize_belief(up,is) == initialize_belief(up,initialstate(t_pomdp))
+
+    init_ro = [1,1]
+    target = [5,5]
+    maxbatt = 15
+    rew_locs = SVector{2,Int}.([[1,4],[4,1],[3,3]])
+    rew_vals = [3.0,3.0,3.0]
+    r_find = 100.0
+    map_size=(5,5)
+    auto_home=true
+    terminate_on_find=true
+    is = POMDPTools.Uniform(SAR_State(init_ro, SVector(x, y), maxbatt) for x in 1:map_size[1], y in 1:map_size[2])
+
+    t_pomdp = SAR_POMDP(
+    init_ro=init_ro,
+    target = target,
+    maxbatt = maxbatt,
+    rew_locs = rew_locs,
+    rew_vals = rew_vals,
+    r_find = r_find,
+    map_size = map_size,
+    auto_home = auto_home,
+    terminate_on_find = terminate_on_find,
+    initial_state_dist=is)
+
+    @test length(support(is)) == length(support(initialstate(t_pomdp)))
+    @test all([state ∈ support(initialstate(t_pomdp)) for state in support(is)])
+    @test [pdf(is,state) for state in support(is)] == [pdf(initialstate(t_pomdp),state) for state in support(initialstate(t_pomdp))]
+
+    up = DiscreteUpdater(t_pomdp)
+
+    @test initialize_belief(up,is) == initialize_belief(up,initialstate(t_pomdp))
+
+    init_ro = [1,1]
+    target = [5,5]
+    maxbatt = 15
+    rew_locs = SVector{2,Int}.([[1,4],[4,1],[3,3]])
+    rew_vals = [3.0,3.0,3.0]
+    r_find = 100.0
+    map_size=(5,5)
+    auto_home=true
+    terminate_on_find=true
+    @show [SAR_State(init_ro, SVector(x, y), maxbatt) for x in 1:map_size[1], y in 1:map_size[2]]
+    istates = support(initialstate(t_pomdp))
+    is = SparseCat(istates,[0.5,0.5,zeros(23)...])
+
+    t_pomdp = SAR_POMDP(
+    init_ro=init_ro,
+    target = target,
+    maxbatt = maxbatt,
+    rew_locs = rew_locs,
+    rew_vals = rew_vals,
+    r_find = r_find,
+    map_size = map_size,
+    auto_home = auto_home,
+    terminate_on_find = terminate_on_find,
+    initial_state_dist=is)
+
+    @test length(support(is)) == length(support(initialstate(t_pomdp)))
+    @test all([state ∈ support(initialstate(t_pomdp)) for state in support(is)])
+    @test [pdf(is,state) for state in support(is)] == [pdf(initialstate(t_pomdp),state) for state in support(initialstate(t_pomdp))]
+
+    up = DiscreteUpdater(t_pomdp)
+
+    @test initialize_belief(up,is) == initialize_belief(up,initialstate(t_pomdp))
+end
 @testset "Consistency Tests" begin
     @test has_consistent_distributions(pomdp)
 end
