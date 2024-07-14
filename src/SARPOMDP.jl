@@ -23,11 +23,15 @@ using JLD2
 
 include("common.jl")
 
-include(joinpath(@__DIR__,"batteryPOMDP","core.jl"))
-export SAR_POMDP, SAR_State
+include(joinpath(@__DIR__,"model","core.jl"))
+export SAR_POMDP,
+       SAR_POMDP_human,
+       SAR_State,
+       SAR_State_human
 
-include(joinpath(@__DIR__,"batteryPOMDP","functions.jl"))
-include(joinpath(@__DIR__,"batteryPOMDP","simulate.jl"))
+include(joinpath(@__DIR__,"model","functions.jl"))
+include(joinpath(@__DIR__,"model","functions_human.jl"))
+include(joinpath(@__DIR__,"model","simulate.jl"))
 export simulateSARPOMDP, 
        SARPOMDPSimulator
 

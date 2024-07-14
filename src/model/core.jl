@@ -25,12 +25,33 @@ mutable struct SAR_POMDP <: POMDP{SAR_State, Symbol, BitArray{1}}
     initial_state_dist::SparseCat{Vector{SAR_State},Vector{Float64}}
 end
 
-mutable struct SAR_POMDP_human{P<:POMDP} <: POMDP{SAR_State, Symbol, BitArray{1}}
+mutable struct SAR_POMDP_human{P<:POMDP} <: POMDP{SAR_State_human, Symbol, BitArray{1}}
     underlying_pomdp::P
-    initial_state_dist::SparseCat{Set{SAR_State_human},Vector{Float64}}
+    initial_state_dist::SparseCat{Vector{SAR_State_human{SAR_State}},Vector{Float64}}
     action_list::Vector{Symbol}
     observation_list::Vector{BitArray{1}}
 end
+
+function belief_given_robot(pomdp, robot_init)
+    pomdp = pomdp.underlying_pomdp
+    belief = POMDPTools.Uniform(SAR_State_human(SAR_State(robot_init, SVector(x, y), pomdp.maxbatt), true) for x in 1:pomdp.size[1], y in 1:pomdp.size[2])
+    supp = [support(belief)...]
+    return SparseCat(supp,[pdf(belief,s) for s in supp])
+end
+
+function SAR_POMDP_human(pomdp::SAR_POMDP; 
+            initial_state_dist=POMDPTools.Uniform(SAR_State_human(SAR_State(pomdp.robot_init, SVector(x, y), pomdp.maxbatt), true) for x in 1:pomdp.size[1], y in 1:pomdp.size[2]),
+            action_list=[:left, :right, :up, :down], 
+            observation_list=fill(observations(pomdp)[1], length(action_list)))
+
+    if !isa(initial_state_dist,SparseCat{Vector{SAR_State_human{SAR_State}},Vector{Float64}})
+        supp = [support(initial_state_dist)...]
+        initial_state_dist = SparseCat(supp,[pdf(initial_state_dist,s) for s in supp])
+    end
+            
+    return SAR_POMDP_human(pomdp, initial_state_dist, action_list, observation_list)
+end
+
 
 function SAR_POMDP(sinit::SAR_State; 
                         map_size=(10,10), 

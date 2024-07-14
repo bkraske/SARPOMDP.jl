@@ -154,6 +154,74 @@ function POMDPTools.ModelTools.render(m::SAR_POMDP, step)
     return compose(context((w-sz)/2, (h-sz)/2, sz, sz), robot, target, grid, outline)
 end
 
+function POMDPTools.ModelTools.render(m::SAR_POMDP_human, step)
+    #set_default_graphic_size(14cm,14cm)
+    m = m.underlying_pomdp
+
+    nx, ny = m.size
+    cells = []
+    target_marginal = zeros(nx, ny)
+
+    if haskey(step, :bp) && !ismissing(step[:bp])
+        for sp in support(step[:bp])
+            p = pdf(step[:bp], sp)
+            if sp.underlying_state.target != [-1,-1] # TO-DO Fix this
+                target_marginal[sp.underlying_state.target...] += p
+            end
+        end
+    end
+    #display(target_marginal)
+    norm_top = normalize(target_marginal)
+    #display(norm_top)
+    for x in 1:nx, y in 1:ny
+        cell = cell_ctx((x,y), m.size)
+        t_op = norm_top[x,y]
+        
+        # TO-DO Fix This
+        if t_op > 1.0
+            if t_op < 1.001
+                t_op = 0.999
+            else
+                @error("t_op > 1.001", t_op)
+            end
+        end
+        opval = t_op
+        if opval > 0.0 
+           opval = clamp(t_op*2,0.05,1.0)
+        end
+        max_op = maximum(norm_top)
+        min_op = minimum(norm_top)
+        frac = (opval-min_op)/(max_op-min_op)
+        clr = get(ColorSchemes.bamako, frac)
+        
+        target = compose(context(), rectangle(), fill(clr), stroke("gray"))
+        #println("opval: ", t_op)
+        compose!(cell, target)
+
+        push!(cells, cell)
+    end
+    grid = compose(context(), linewidth(0.00000001mm), cells...)
+    outline = compose(context(), linewidth(0.01mm), rectangle(), fill("white"), stroke("black"))
+
+    if haskey(step, :sp)
+        robot_ctx = cell_ctx(step[:sp].underlying_state.robot, m.size)
+        robot = compose(robot_ctx, circle(0.5, 0.5, 0.5), fill("blue"))
+        target_ctx = cell_ctx(step[:sp].underlying_state.target, m.size)
+        target = compose(target_ctx, star(0.5,0.5,0.8,5,0.5), fill("orange"), stroke("black"))
+    else
+        robot = nothing
+        target = nothing
+    end 
+    #img = read(joinpath(@__DIR__,"../..","drone.png"));
+    #robot = compose(robot_ctx, bitmap("image/png",img, 0, 0, 1, 1))
+    #person = read(joinpath(@__DIR__,"../..","missingperson.png"));
+    #target = compose(target_ctx, bitmap("image/png",person, 0, 0, 1, 1))
+
+    sz = min(w,h)
+    
+    return compose(context((w-sz)/2, (h-sz)/2, sz, sz), robot, target, grid, outline)
+end
+
 function normie(input, a)
     return (input-minimum(a))/(maximum(a)-minimum(a))
 end
