@@ -298,5 +298,67 @@ function POMDPTools.ModelTools.render(m::SAR_POMDP, step, plt_reward::Bool)
     return compose(context((w-sz)/2, (h-sz)/2, sz, sz), robot, target, grid, outline)
 end
 
-POMDPTools.ModelTools.render(m::SAR_POMDP_human, step) = POMDPTools.ModelTools.render(m.pomdp, step)
-POMDPTools.ModelTools.render(m::SAR_POMDP_human, step, plt_reward::Bool) = POMDPTools.ModelTools.render(m.pomdp, step, plt_reward)
+function POMDPTools.ModelTools.render(m::SAR_POMDP_human, step, plt_reward::Bool)
+    nx, ny = m.underlying_pomdp.size
+    cells = []
+
+    minr = minimum(m.underlying_pomdp.reward)-1
+    maxr = maximum(m.underlying_pomdp.reward)
+
+    if haskey(step, :hist)
+        trajec = [(histstep[1].underlying_state.robot, histstep[2]) for histstep in step[:hist]]
+        statehist = [s for (s,a) in trajec]
+        actionhist = [a for (s,a) in trajec]
+    end
+    for x in 1:nx, y in 1:ny
+        cell = cell_ctx((x,y), m.underlying_pomdp.size)
+        r = m.underlying_pomdp.reward[rewardinds(m.underlying_pomdp, SA[x,y])...]
+        if iszero(r)
+            target = compose(context(), rectangle(), fill("white"), stroke("gray"))
+        else
+            frac = (r-minr)/(maxr-minr)
+            clr = get(ColorSchemes.turbo, frac)
+            target = compose(context(), rectangle(), fill(clr), stroke("gray"), fillopacity(0.9))
+        end
+
+        if haskey(step, :hist)
+            for (i, (xh, yh)) in enumerate(statehist)
+                if x == xh && y == yh
+                    if actionhist[i] == :left
+                        spec = compose(context(), arrow(), stroke("black"), fill(nothing), linewidth(0.6mm), (context(), line([(0.5,0.5),(0.3,0.5)]), stroke("black")))
+                        compose!(target, spec)
+                    elseif actionhist[i] == :right
+                        spec = compose(context(), arrow(), stroke("black"), fill(nothing), linewidth(0.6mm), (context(), line([(0.5,0.5),(0.7,0.5)]), stroke("black")))
+                        compose!(target, spec)
+                    elseif actionhist[i] == :up
+                        spec = compose(context(), arrow(), stroke("black"), fill(nothing), linewidth(0.6mm), (context(), line([(0.5,0.5),(0.5,0.3)]), stroke("black")))
+                        compose!(target, spec)
+                    elseif actionhist[i] == :down
+                        spec = compose(context(), arrow(), stroke("black"), fill(nothing), linewidth(0.6mm), (context(), line([(0.5,0.5),(0.5,0.7)]), stroke("black")))
+                        compose!(target, spec)
+                    end
+                end
+            end
+        end
+
+        compose!(cell, target)
+        push!(cells, cell)
+    end
+    grid = compose(context(), linewidth(1mm), cells...)
+    outline = compose(context(), linewidth(0.05mm), rectangle(), fill("black"), stroke("black"))
+
+    if haskey(step, :sp)
+        robot_ctx = cell_ctx(step[:sp].underlying_state.robot, m.underlying_pomdp.size)
+        robot = compose(robot_ctx, circle(0.5, 0.5, 0.3), fill("blue"))
+        target_ctx = cell_ctx(step[:sp].underlying_state.target, m.underlying_pomdp.size)
+        target = compose(target_ctx, star(0.5,0.5,0.5,5,0.5), fill("orange"), stroke("black"))
+    else
+        robot = nothing
+        target = nothing
+    end
+    sz = min(w,h)
+    #return compose(context((w-sz)/2, (h-sz)/2, sz, (ny/nx)*sz), robot, target, grid, outline)
+    return compose(context((w-sz)/2, (h-sz)/2, sz, sz), robot, target, grid, outline)
+end
+#POMDPTools.ModelTools.render(m::SAR_POMDP_human, step) = POMDPTools.ModelTools.render(m.underlying_pomdp, step)
+#POMDPTools.ModelTools.render(m::SAR_POMDP_human, step, plt_reward::Bool) = POMDPTools.ModelTools.render(m.underlying_pomdp, step, plt_reward)

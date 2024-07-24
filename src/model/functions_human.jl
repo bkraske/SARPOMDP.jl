@@ -65,7 +65,7 @@ function POMDPs.transition(m::SAR_POMDP_human, s, a)
     if horizon_idx <= length(m.action_list)
         if s.onpath && a == m.action_list[horizon_idx]
                 #compute prob of observing the human observation at this timestep
-                obsdist = observation(m, a, first(states))
+                obsdist = observation(m.underlying_pomdp, a, first(states).underlying_state)
                 push!(probs, obsdist.probs[obsindex(m, m.observation_list[horizon_idx])])
                 push!(probs, 1.0-probs[end])
         else
@@ -97,7 +97,75 @@ The the observations are ordered as follows:
 POMDPs.observations(m::SAR_POMDP_human) = OBSERVATIONS
 POMDPs.obsindex(m::SAR_POMDP_human, o::BitVector) = obsind[o]
 
-POMDPs.observation(m::SAR_POMDP_human, a::Symbol, sp::SAR_State_human) = observation(m.underlying_pomdp, a, sp.underlying_state)
+# POMDPs.observation(m::SAR_POMDP_human, a::Symbol, sp::SAR_State_human) = observation(m.underlying_pomdp, a, sp.underlying_state)
+
+function process_observations(m::SAR_POMDP_human, probs, horizon_idx)
+    new_observations = copy(OBSERVATIONS)
+    new_probs = copy(probs)
+    ind = obsindex(m, m.observation_list[horizon_idx])
+    deleteat!(new_observations, ind)
+    deleteat!(new_probs, ind)
+    new_probs = sum(new_probs) == 1.0 ? new_probs : (new_probs .+ 1.0) ./ sum(new_probs .+ 1.0)
+    return new_observations, new_probs
+end
+
+# function POMDPs.observation(m::SAR_POMDP_human, a::Symbol, sp::SAR_State_human)
+#     if sp.underlying_state.battery < m.underlying_pomdp.maxbatt
+#         horizon_idx = m.underlying_pomdp.maxbatt-sp.underlying_state.battery
+#     else
+#         horizon_idx = m.underlying_pomdp.maxbatt-sp.underlying_state.battery + 1 # necessary for sparse tabular sum-to-one check
+#     end 
+
+#     if horizon_idx <= length(m.action_list)
+#         if sp.onpath
+#             return Deterministic(m.observation_list[horizon_idx])
+#         else
+#             if norm(sp.underlying_state.robot-sp.underlying_state.target) == 1.0 # target and robot within one grid cell of each other 
+#                 targetloc = targetdir(sp.underlying_state)
+
+#                 if targetloc == :left
+#                     probs = [0.0, 0.0, 0.50, 0.0, 0.25, 0.25]
+#                 elseif targetloc == :right
+#                     probs = [0.0, 0.0, 0.0, 0.50, 0.25, 0.25]
+#                 elseif targetloc == :up
+#                     probs = [0.0, 0.0, 0.25, 0.25, 0.0, 0.50]
+#                 elseif targetloc == :down
+#                     probs = [0.0, 0.0, 0.25, 0.25, 0.50, 0.0]
+#                 end
+
+#                 new_observations, new_probs = process_observations(m, probs, horizon_idx)
+#                 return SparseCat(new_observations, new_probs)
+#             end
+
+#             if sp.underlying_state.robot == sp.underlying_state.target # target and robot in same grid cell
+#                 probs = [0.0, 1.0, 0.0, 0.0, 0.0, 0.0]
+#                 new_observations, new_probs = process_observations(m, probs, horizon_idx)
+#                 return SparseCat(new_observations, new_probs)
+#             end
+
+#             probs = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+#             new_observations, new_probs = process_observations(m, probs, horizon_idx)
+#             return SparseCat(new_observations, new_probs)
+#         end
+#     else
+#         observation(m.underlying_pomdp, a, sp.underlying_state)
+#     end
+# end
+
+function POMDPs.observation(m::SAR_POMDP_human, a::Symbol, sp::SAR_State_human)
+    if sp.underlying_state.battery < m.underlying_pomdp.maxbatt
+        horizon_idx = m.underlying_pomdp.maxbatt-sp.underlying_state.battery
+    else
+        horizon_idx = m.underlying_pomdp.maxbatt-sp.underlying_state.battery + 1 # necessary for sparse tabular sum-to-one check
+    end 
+
+    if horizon_idx <= length(m.action_list) && sp.onpath
+        return Deterministic(m.observation_list[horizon_idx])
+    end
+    
+    return observation(m.underlying_pomdp, a, sp.underlying_state)
+end
 
 POMDPs.reward(m::SAR_POMDP_human, s::SAR_State_human, a::Symbol, sp::SAR_State_human) = reward(m, s, a)
 
@@ -106,10 +174,14 @@ function POMDPs.reward(m::SAR_POMDP_human, s::SAR_State_human, a::Symbol)
     rtot = reward(m.underlying_pomdp, s.underlying_state, a)
     
     if horizon_idx <= length(m.action_list)
-        return s.onpath && a == m.action_list[horizon_idx] ? rtot : rtot + -10000
-    else
-        return rtot
+        if s.onpath
+            return a == m.action_list[horizon_idx] ? rtot : rtot - 10000
+        else
+            return rtot
+        end
     end
+
+    return rtot
 end
 
 #POMDPs.isterminal(m::SAR_POMDP_human, s::SAR_State_human) = s.robot == SA[-1,-1]
