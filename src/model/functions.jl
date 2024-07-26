@@ -47,6 +47,8 @@ function POMDPs.transition(m::SAR_POMDP, s, a)
         if s != m.robot_init && newrobot == m.robot_init #THIS IS NOT STOCHASTIC SAFE...
             return Deterministic(SAR_State([-1,-1], [-1,-1], -1))
         end
+    elseif newrobot == m.robot_init && s.battery < m.maxbatt
+        return Deterministic(SAR_State([-1,-1], [-1,-1], -1))
     # elseif sp.battery == 1 #Handle empty battery
     #     return Deterministic(SAR_State([-1,-1], [-1,-1], -1))
     end
