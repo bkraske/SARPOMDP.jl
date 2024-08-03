@@ -36,7 +36,7 @@ POMDPs.actionindex(m::SAR_POMDP_human, a) = actionindex(m.underlying_pomdp, a)
 
 bounce(m::SAR_POMDP_human, pos, offset) = bounce(m.underlying_pomdp, pos, offset)
 
-function POMDPs.transition(m::SAR_POMDP_human, s, a)
+function POMDPs.transition(m::SAR_POMDP_human, s::SAR_State_human, a)
     states = SAR_State_human[]
     probs = Float64[]
     remaining_prob = 1.0
@@ -65,8 +65,8 @@ function POMDPs.transition(m::SAR_POMDP_human, s, a)
     if horizon_idx <= length(m.action_list)
         if s.onpath && a == m.action_list[horizon_idx]
                 #compute prob of observing the human observation at this timestep
-                obsdist = observation(m.underlying_pomdp, a, first(states).underlying_state)
-                push!(probs, obsdist.probs[obsindex(m, m.observation_list[horizon_idx])])
+                obsdist = observation(m.underlying_pomdp, a, SAR_State(newrobot, s.underlying_state.target, s.underlying_state.battery-1))
+                push!(probs, obsdist.probs[obsindex(m, m.observation_list[horizon_idx])]) #This appears to be order unsafe (is the distribution always in the same order?)
                 push!(probs, 1.0-probs[end])
         else
             push!(probs, 0.0, 1.0)
@@ -175,7 +175,7 @@ function POMDPs.reward(m::SAR_POMDP_human, s::SAR_State_human, a::Symbol)
     
     if horizon_idx <= length(m.action_list)
         if s.onpath
-            return a == m.action_list[horizon_idx] ? rtot : rtot - 10000
+            return a == m.action_list[horizon_idx] ? rtot : -10000
         else
             return rtot
         end

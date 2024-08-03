@@ -4,8 +4,8 @@ struct SAR_State
     battery::Int
 end
 
-struct SAR_State_human{S}
-    underlying_state::S
+struct SAR_State_human
+    underlying_state::SAR_State
     onpath::Bool
 end
 
@@ -27,7 +27,7 @@ end
 
 mutable struct SAR_POMDP_human{P<:POMDP} <: POMDP{SAR_State_human, Symbol, BitArray{1}}
     underlying_pomdp::P
-    initial_state_dist::SparseCat{Vector{SAR_State_human{SAR_State}},Vector{Float64}}
+    initial_state_dist::SparseCat{Vector{SAR_State_human},Vector{Float64}}
     action_list::Vector{Symbol}
     observation_list::Vector{BitArray{1}}
 end
@@ -44,7 +44,7 @@ function SAR_POMDP_human(pomdp::SAR_POMDP;
             action_list=[:left, :right, :up, :down], 
             observation_list=fill(observations(pomdp)[1], length(action_list)))
 
-    if !isa(initial_state_dist,SparseCat{Vector{SAR_State_human{SAR_State}},Vector{Float64}})
+    if !isa(initial_state_dist,SparseCat{Vector{SAR_State_human},Vector{Float64}})
         supp = [support(initial_state_dist)...]
         initial_state_dist = SparseCat(supp,[pdf(initial_state_dist,s) for s in supp])
     end

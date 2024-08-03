@@ -81,7 +81,7 @@ function POMDPs.observation(m::SAR_POMDP, a::Symbol, sp::SAR_State)
 
     if norm(sp.robot-sp.target) == 1.0 # target and robot within one grid cell of each other 
         targetloc = targetdir(sp)
-
+        #FIX THIS - NO OBSERVATION OF NON-EXISTENT CELLS
         if targetloc == :left
             probs = [0.0, 0.0, 0.50, 0.0, 0.25, 0.25]
         elseif targetloc == :right
